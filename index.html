@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VISTA</title>
+    <link rel="icon" type="image/x-icon" href="favicon.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js"></script>
+    <script>
+        var hostname;
+        var port;
+        var clientId;
+
+        // var fireboomimg;
+
+        // MQTT client instance
+        var client;
+        var projectTopic;
+
+        var slider1topic;
+        var slider2topic;
+        var slider3topic;
+        var toggle1topic;
+        var toggle2topic;
+        var toggle3topic;
+        var randomValueTopic;
+
+        var projectslider1topic;
+        var projectslider2topic;
+        var projectslider3topic;
+        var projecttoggle1topic;
+        var projecttoggle2topic;
+        var projecttoggle3topic;
+        var projectrandomValueTopic;
+
+        var slider1min = 0;
+        var slider1max = 100;
+        var slider2min = 0;
+        var slider2max = 100;
+        var slider3min = 0;
+        var slider3max = 100;
+
+        function onConnect() {
+            console.log("Connected to MQTT broker");
+            client.subscribe(projectslider1topic);
+            client.subscribe(projectslider2topic);
+            client.subscribe(projectslider3topic);
+            client.subscribe(projecttoggle1topic);
+            client.subscribe(projecttoggle2topic);
+            client.subscribe(projecttoggle3topic);
+            client.subscribe(projectrandomValueTopic);
+            hideServerConfig();
+        }
+
+        function onFailure(message) {
+            console.log("Connection to MQTT broker failed: " + message.errorMessage);
+            enableInput();
+        }
+
+        function onMessageArrived(message) {
+            console.log("Received message: " + message.payloadString);
+            console.log("Topic of Received message: " + message.destinationName);
+            switch (message.destinationName) {
+                case projectslider1topic:
+                    document.getElementById("slider1label").innerText = message.payloadString;
+                    break;
+                case projectslider2topic:
+                    document.getElementById("slider2label").innerText = message.payloadString;
+                    break;
+                case projectslider3topic:
+                    document.getElementById("slider3label").innerText = message.payloadString;
+                    break;
+                case projecttoggle1topic:
+                    document.getElementById("toggle1label").innerText = message.payloadString;
+                    break;
+                case projecttoggle2topic:
+                    document.getElementById("toggle2label").innerText = message.payloadString;
+                    break;
+                case projecttoggle3topic:
+                    document.getElementById("toggle3label").innerText = message.payloadString;
+                    break;
+                case projectrandomValueTopic:
+                    document.getElementById("randomValuelabel").innerText = message.payloadString;
+                    break;
+
+
+            }
+
+
+        }
+
+        function connect() {
+            if (!isNoprotokolUrlValid(document.getElementById("brokerurl").value)) {
+                alert("Check URL.");
+                return;
+            } else {
+                document.getElementById("brokerurl").disabled = true;
+                hostname = document.getElementById("brokerurl").value;
+            }
+
+            if (!isIntValid(document.getElementById("brokerport").value) || document.getElementById("brokerport").value === "") {
+                alert("Check Port.");
+                return;
+            } else {
+                document.getElementById("brokerport").disabled = true;
+                port = parseInt(document.getElementById("brokerport").value);
+            }
+
+            if (document.getElementById("clientid").value === "") {
+                alert("Check ClientID.");
+                return;
+            } else {
+                document.getElementById("clientid").disabled = true;
+                clientId = document.getElementById("clientid").value;
+            }
+
+            // broker = {
+            //     hostname: hostname,
+            //     port: port,
+            //     clientId: clientId
+            // };
+
+            if (document.getElementById("projecttopic").value === "") {
+                alert("Check project topic.");
+                return;
+            } else {
+                document.getElementById("projecttopic").disabled = true;
+                projectTopic = "vc/signal/input/" + document.getElementById("projecttopic").value;
+            }
+
+            if (document.getElementById("slider1topic").value === "") {
+                alert("Check Slider 1 topic.");
+                return;
+            } else {
+                document.getElementById("slider1topic").disabled = true;
+                slider1topic = document.getElementById("slider1topic").value;
+            }
+
+            if (document.getElementById("slider2topic").value === "") {
+                alert("Check Slider 2 topic.");
+                return;
+            } else {
+                document.getElementById("slider2topic").disabled = true;
+                slider2topic = document.getElementById("slider2topic").value;
+            }
+
+            if (document.getElementById("slider3topic").value === "") {
+                alert("Check Slider 3 topic.");
+                return;
+            } else {
+                document.getElementById("slider3topic").disabled = true;
+                slider3topic = document.getElementById("slider3topic").value;
+            }
+
+            if (document.getElementById("toggle1topic").value === "") {
+                alert("Check toggle 1 topic.");
+                return;
+            } else {
+                document.getElementById("toggle1topic").disabled = true;
+                toggle1topic = document.getElementById("toggle1topic").value;
+            }
+
+            if (document.getElementById("toggle2topic").value === "") {
+                alert("Check toggle 2 topic.");
+                return;
+            } else {
+                document.getElementById("toggle2topic").disabled = true;
+                toggle2topic = document.getElementById("toggle2topic").value;
+            }
+
+            if (document.getElementById("toggle3topic").value === "") {
+                alert("Check toggle 3 topic.");
+                return;
+            } else {
+                document.getElementById("toggle3topic").disabled = true;
+                toggle3topic = document.getElementById("toggle3topic").value;
+            }
+
+            if (document.getElementById("randomValueTopic").value === "") {
+                alert("Check random value topic.");
+                return;
+            } else {
+                document.getElementById("randomValueTopic").disabled = true;
+                randomValueTopic = document.getElementById("randomValueTopic").value;
+            }
+
+            document.getElementById("connectbutton").disabled = true;
+
+            projectslider1topic = projectTopic + "/" + slider1topic;
+            projectslider2topic = projectTopic + "/" + slider2topic;
+            projectslider3topic = projectTopic + "/" + slider3topic;
+            projecttoggle1topic = projectTopic + "/" + toggle1topic;
+            projecttoggle2topic = projectTopic + "/" + toggle2topic;
+            projecttoggle3topic = projectTopic + "/" + toggle3topic;
+            projectrandomValueTopic = projectTopic + "/" + randomValueTopic;
+
+            client = new Paho.MQTT.Client(hostname, port, clientId);
+            client.onConnectionLost = onFailure;
+            client.onMessageArrived = onMessageArrived;
+            // Connect to MQTT broker
+            client.connect({
+                onSuccess: onConnect,
+                onFailure: onFailure,
+                useSSL: false
+            });
+        }
+
+        function hideServerConfig() {
+
+            var x = document.getElementById("serverconfig");
+            var y = document.getElementById("serverconfigtoggle");
+            if (x.style.display === "none") {
+                x.style.display = "block";
+                y.innerHTML = " <p style='font-size: small'>></p>";
+
+            } else {
+                x.style.display = "none";
+                y.innerHTML = " <p style='font-size: small'><</p>";
+            }
+
+        }
+
+        function sendmessage(value, topic) {
+            message = new Paho.MQTT.Message(value);
+            message.destinationName = topic;
+            client.send(message)
+        }
+
+        function sendSlider(value, id) {
+            if (id === "slider1") {
+                if (typeof slider1max === 'undefined' || typeof slider1min === 'undefined') {
+                    console.log(typeof slider1max + " - " + typeof slider1min);
+                    alert("Define a valid range for slider 1.")
+                    document.getElementById('slider1').value = 50;
+                } else {
+                    console.log(typeof slider1max + " - " + typeof slider1min);
+                    let adjValue1 = value * (slider1max - slider1min) / 100 + +slider1min;
+                    sendmessage(adjValue1.toFixed(2).toString(), projectslider1topic);
+                }
+            } else if (id === "slider2") {
+                if (typeof slider2max === 'undefined' || typeof slider2min === 'undefined') {
+                    alert("Define a valid range for slider 2.")
+                    document.getElementById('slider2').value = 50;
+                } else {
+                    let adjValue2 = value * (slider2max - slider2min) / 100 + +slider2min;
+                    sendmessage(adjValue2.toFixed(2).toString(), projectslider2topic);
+                }
+            } else if (id === "slider3") {
+                if (typeof slider3max === 'undefined' || typeof slider3min === 'undefined') {
+                    alert("Define a valid range for slider 3.")
+                    document.getElementById('slider3').value = 50;
+                } else {
+                    let adjValue3 = value * (slider3max - slider3min) / 100 + +slider3min;
+                    sendmessage(adjValue3.toFixed(2).toString(), projectslider3topic);
+                }
+            }
+        }
+
+        // function sendFlamesensor() {
+        //     document.getElementById("FireBoomImg").src = "FireBoom.gif"
+        //     //gif length 1.19 s
+        //     for (i = 1; i < 11; i++) {
+        //         var tick = function (i) {
+        //             return function () {
+        //                 if (i < 10) {
+        //                     var x = 0.13222 * i;
+        //                     var j = -46.925 * x * x + 62.044 * x - 5.5952;
+        //                     //console.log(i + ": " + x + ": " + j);
+        //                     sendmessage("" + j, projectflammensensortopic);
+        //                 } else {
+        //                     sendmessage("0", projectflammensensortopic)
+        //                     document.getElementById("FireBoomImg").src = "FireBoomEmpty.png"
+        //                 }
+        //             }
+        //         };
+        //         setTimeout(tick(i), (132.22 * i));
+        //     }
+        // }
+
+        function sendToggle(value, id) {
+            console.log(value);
+            if (id === "toggle1")
+                sendmessage(value.toString(), projecttoggle1topic);
+            else if (id === "toggle2")
+                sendmessage(value.toString(), projecttoggle2topic);
+            else if (id === "toggle3")
+                sendmessage(value.toString(), projecttoggle3topic);
+        }
+
+        function sendRandomValue() {
+            let min = Number(document.getElementById("randomValueMin").value);
+            let max = Number(document.getElementById("randomValueMax").value);
+            if (min >= max) {
+                alert("min must be smaller than max");
+            } else {
+                let rand = Math.random() * (max - min) + min;
+                sendmessage("" + rand.toFixed(2), projectrandomValueTopic);
+            }
+        }
+
+        // function random() {
+        //     var i = Math.floor(Math.random() * 20) % 4;
+        //     if (i <= 0) return random();
+        //     return i;
+        // }
+
+
+        function sendAcAdapter(value) {
+            sendmessage("" + value * 5 / 100, projectnetzteiltopic);
+        }
+
+        // function copyInput(value) {
+        //     document.getElementById('accLabelY').value = value;
+        //     document.getElementById('accLabelZ').value = value;
+        // }
+
+        function enableInput() {
+            const collection = document.getElementsByClassName("inputs");
+            for (const element of collection) {
+                element.disabled = false;
+            }
+            alert("Communication error. Please try again.")
+            client.disconnect()
+        }
+
+        function isNoprotokolUrlValid(string) {
+            try {
+                new URL("http://" + string);
+                return true;
+            } catch (err) {
+                return false;
+            }
+        }
+
+        function isIntValid(string) {
+            try {
+                parseInt(string);
+                return true;
+            } catch (err) {
+                return false;
+            }
+        }
+
+        window.onload = init;
+
+        function init() {
+            // the code to be called when the dom has loaded
+            // #document has its nodes
+
+            // fireboomimg = document.getElementById("FireBoomImg");
+
+            //fireboomimg.addEventListener("animationend", () => document.getElementById("firecontainer").innerHTML="");
+        }
+
+        function changeSliderMin(value, id) {
+            if (id === "slider1")
+                slider1min = value;
+            else if (id === "slider2")
+                slider2min = value;
+            else if (id === "slider3")
+                slider3min = value;
+        }
+
+        function changeSliderMax(value, id) {
+            if (id === "slider1")
+                slider1max = value;
+            else if (id === "slider2")
+                slider2max = value;
+            else if (id === "slider3")
+                slider3max = value;
+        }
+
+        //    }
+    </script>
+    <script>
+        window.addEventListener("load", () => {
+            let op = window.inputKnobsOptions || {};
+            op.knobWidth = op.knobWidth || op.knobDiameter || 64;
+            op.knobHeight = op.knobHeight || op.knobDiameter || 64;
+            op.sliderWidth = op.sliderWidth || op.sliderDiameter || 128;
+            op.sliderHeight = op.sliderHeight || op.sliderDiameter || 20;
+            op.switchWidth = op.switchWidth || op.switchDiameter || 24;
+            op.switchHeight = op.switchHeight || op.switchDiameter || 24;
+            op.fgcolor = op.fgcolor || "rgb(77, 77, 199)";
+            op.bgcolor = op.bgcolor || "rgb(50,50,50)";
+            op.knobMode = op.knobMode || "linear";
+            op.sliderMode = op.sliderMode || "relative";
+            let styles = document.createElement("style");
+            styles.innerHTML =
+                `input[type=range].input-knob,input[type=range].input-slider{
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  border:none;
+  box-sizing:border-box;
+  overflow:hidden;
+  background-repeat:no-repeat;
+  background-size:100% 100%;
+  background-position:0px 0%;
+  background-color:transparent;
+  touch-action:none;
+}
+input[type=range].input-knob{
+  width:${op.knobWidth}px; height:${op.knobHeight}px;
+}
+input[type=range].input-slider{
+  width:${op.sliderWidth}px; height:${op.sliderHeight}px;
+}
+input[type=range].input-knob::-webkit-slider-thumb,input[type=range].input-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  opacity:0;
+}
+input[type=range].input-knob::-moz-range-thumb,input[type=range].input-slider::-moz-range-thumb{
+  -moz-appearance:none;
+  height:0;
+  border:none;
+}
+input[type=range].input-knob::-moz-range-track,input[type=range].input-slider::-moz-range-track{
+  -moz-appearance:none;
+  height:0;
+  border:none;
+}
+input[type=checkbox].input-switch,input[type=radio].input-switch {
+  width:${op.switchWidth}px;
+  height:${op.switchHeight}px;
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  background-size:100% 200%;
+  background-position:0% 0%;
+  background-repeat:no-repeat;
+  border:none;
+  border-radius:0;
+  background-color:transparent;
+}
+input[type=checkbox].input-switch:checked,input[type=radio].input-switch:checked {
+  background-position:0% 100%;
+}`;
+            document.head.appendChild(styles);
+            let makeKnobFrames = (fr, fg, bg) => {
+                let r =
+                    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="64" height="${fr * 64}" viewBox="0 0 64 ${fr * 64}" preserveAspectRatio="none">
+<defs><g id="K"><circle cx="32" cy="32" r="30" fill="${bg}"/>
+<line x1="32" y1="28" x2="32" y2="7" stroke-linecap="round" stroke-width="6" stroke="${fg}"/></g></defs>
+<use xlink:href="#K" transform="rotate(-135,32,32)"/>`;
+                for (let i = 1; i < fr; ++i)
+                    r += `<use xlink:href="#K" transform="translate(0,${64 * i}) rotate(${-135 + 270 * i / fr},32,32)"/>`;
+                return r + "</svg>";
+            }
+            let makeHSliderFrames = (fr, fg, bg, w, h) => {
+                let r =
+                    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${fr * h}" viewBox="0 0 ${w} ${fr * h}" preserveAspectRatio="none">
+<defs><g id="B"><rect x="0" y="0" width="${w}" height="${h}" rx="${h / 2}" ry="${h / 2}" fill="${bg}"/></g>
+<g id="K"><circle x="${w / 2}" y="0" r="${h / 2 * 0.9}" fill="${fg}"/></g></defs>`;
+                for (let i = 0; i < fr; ++i) {
+                    r += `<use xlink:href="#B" transform="translate(0,${h * i})"/>`;
+                    r += `<use xlink:href="#K" transform="translate(${h / 2 + (w - h) * i / 100},${h / 2 + h * i})"/>`;
+                }
+                return r + "</svg>";
+            }
+            let makeVSliderFrames = (fr, fg, bg, w, h) => {
+                let r =
+                    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${fr * h}" viewBox="0 0 ${w} ${fr * h}" preserveAspectRatio="none">
+<defs><rect id="B" x="0" y="0" width="${w}" height="${h}" rx="${w / 2}" ry="${w / 2}" fill="${bg}"/>
+<circle id="K" x="0" y="0" r="${w / 2 * 0.9}" fill="${fg}"/></defs>`;
+                for (let i = 0; i < fr; ++i) {
+                    r += `<use xlink:href="#B" transform="translate(0,${h * i})"/>`;
+                    r += `<use xlink:href="#K" transform="translate(${w / 2} ${h * (i + 1) - w / 2 - i * (h - w) / 100})"/>`;
+                }
+                return r + "</svg>";
+            }
+            let initSwitches = (el) => {
+                let w, h, d, fg, bg;
+                if (el.inputKnobs)
+                    return;
+                el.inputKnobs = {};
+                el.refresh = () => {
+                    let src = el.getAttribute("data-src");
+                    d = +el.getAttribute("data-diameter");
+                    let st = document.defaultView.getComputedStyle(el, null);
+                    w = parseFloat(el.getAttribute("data-width") || d || st.width);
+                    h = parseFloat(el.getAttribute("data-height") || d || st.height);
+                    bg = el.getAttribute("data-bgcolor") || op.bgcolor;
+                    fg = el.getAttribute("data-fgcolor") || op.fgcolor;
+                    el.style.width = w + "px";
+                    el.style.height = h + "px";
+                    if (src)
+                        el.style.backgroundImage = "url(" + src + ")";
+                    else {
+                        let minwh = Math.min(w, h);
+                        let svg =
+                            `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h * 2}" viewBox="0 0 ${w} ${h * 2}" preserveAspectRatio="none">
+<g><rect fill="${bg}" x="1" y="1" width="${w - 2}" height="${h - 2}" rx="${minwh * 0.25}" ry="${minwh * 0.25}"/>
+<rect fill="${bg}" x="1" y="${h + 1}" width="${w - 2}" height="${h - 2}" rx="${minwh * 0.25}" ry="${minwh * 0.25}"/>
+<circle fill="${fg}" cx="${w * 0.5}" cy="${h * 1.5}" r="${minwh * 0.25}"/></g></svg>`;
+                        el.style.backgroundImage = "url(data:image/svg+xml;base64," + btoa(svg) + ")";
+                    }
+                };
+                el.refresh();
+            };
+            let initKnobs = (el) => {
+                let w, h, d, fg, bg;
+                if (el.inputKnobs) {
+                    el.redraw();
+                    return;
+                }
+                let ik = el.inputKnobs = {};
+                el.refresh = () => {
+                    d = +el.getAttribute("data-diameter");
+                    let st = document.defaultView.getComputedStyle(el, null);
+                    w = parseFloat(el.getAttribute("data-width") || d || st.width);
+                    h = parseFloat(el.getAttribute("data-height") || d || st.height);
+                    bg = el.getAttribute("data-bgcolor") || op.bgcolor;
+                    fg = el.getAttribute("data-fgcolor") || op.fgcolor;
+                    ik.sensex = ik.sensey = 200;
+                    if (el.className.indexOf("input-knob") >= 0)
+                        ik.itype = "k";
+                    else {
+                        if (w >= h) {
+                            ik.itype = "h";
+                            ik.sensex = w - h;
+                            ik.sensey = Infinity;
+                            el.style.backgroundSize = "auto 100%";
+                        } else {
+                            ik.itype = "v";
+                            ik.sensex = Infinity;
+                            ik.sensey = h - w;
+                            el.style.backgroundSize = "100% auto";
+                        }
+                    }
+                    el.style.width = w + "px";
+                    el.style.height = h + "px";
+                    ik.frameheight = h;
+                    let src = el.getAttribute("data-src");
+                    if (src) {
+                        el.style.backgroundImage = `url(${src})`;
+                        let sp = +el.getAttribute("data-sprites");
+                        if (sp)
+                            ik.sprites = sp;
+                        else
+                            ik.sprites = 0;
+                        if (ik.sprites >= 1)
+                            el.style.backgroundSize = `100% ${(ik.sprites + 1) * 100}%`;
+                        else if (ik.itype != "k") {
+                            el.style.backgroundColor = bg;
+                            el.style.borderRadius = Math.min(w, h) * 0.25 + "px";
+                        }
+                    } else {
+                        let svg;
+                        switch (ik.itype) {
+                            case "k":
+                                svg = makeKnobFrames(101, fg, bg);
+                                break;
+                            case "h":
+                                svg = makeHSliderFrames(101, fg, bg, w, h);
+                                break;
+                            case "v":
+                                svg = makeVSliderFrames(101, fg, bg, w, h);
+                                break;
+                        }
+                        ik.sprites = 100;
+                        el.style.backgroundImage = "url(data:image/svg+xml;base64," + btoa(svg) + ")";
+                        el.style.backgroundSize = `100% ${(ik.sprites + 1) * 100}%`;
+                    }
+                    ik.valrange = {
+                        min: +el.min,
+                        max: (el.max == "") ? 100 : +el.max,
+                        step: (el.step == "") ? 1 : +el.step
+                    };
+                    el.redraw(true);
+                };
+                el.setValue = (v) => {
+                    v = (Math.round((v - ik.valrange.min) / ik.valrange.step)) * ik.valrange.step + ik.valrange.min;
+                    if (v < ik.valrange.min) v = ik.valrange.min;
+                    if (v > ik.valrange.max) v = ik.valrange.max;
+                    el.value = v;
+                    if (el.value != ik.oldvalue) {
+                        el.setAttribute("value", el.value);
+                        el.redraw();
+                        let event = document.createEvent("HTMLEvents");
+                        event.initEvent("input", false, true);
+                        el.dispatchEvent(event);
+                        ik.oldvalue = el.value;
+                    }
+                };
+                ik.pointerdown = (ev) => {
+                    el.focus();
+                    const evorg = ev;
+                    if (ev.touches)
+                        ev = ev.touches[0];
+                    let rc = el.getBoundingClientRect();
+                    let cx = (rc.left + rc.right) * 0.5, cy = (rc.top + rc.bottom) * 0.5;
+                    let dx = ev.clientX, dy = ev.clientY;
+                    let da = Math.atan2(ev.clientX - cx, cy - ev.clientY);
+                    if (ik.itype == "k" && op.knobMode == "circularabs") {
+                        dv = ik.valrange.min + (da / Math.PI * 0.75 + 0.5) * (ik.valrange.max - ik.valrange.min);
+                        el.setValue(dv);
+                    }
+                    if (ik.itype != "k" && op.sliderMode == "abs") {
+                        dv = (ik.valrange.min + ik.valrange.max) * 0.5 + ((dx - cx) / ik.sensex - (dy - cy) / ik.sensey) * (ik.valrange.max - ik.valrange.min);
+                        el.setValue(dv);
+                    }
+                    ik.dragfrom = {
+                        x: ev.clientX,
+                        y: ev.clientY,
+                        a: Math.atan2(ev.clientX - cx, cy - ev.clientY),
+                        v: +el.value
+                    };
+                    document.addEventListener("mousemove", ik.pointermove);
+                    document.addEventListener("mouseup", ik.pointerup);
+                    document.addEventListener("touchmove", ik.pointermove);
+                    document.addEventListener("touchend", ik.pointerup);
+                    document.addEventListener("touchcancel", ik.pointerup);
+                    document.addEventListener("touchstart", ik.preventScroll);
+                    evorg.preventDefault();
+                    evorg.stopPropagation();
+                };
+                ik.pointermove = (ev) => {
+                    let dv;
+                    let rc = el.getBoundingClientRect();
+                    let cx = (rc.left + rc.right) * 0.5, cy = (rc.top + rc.bottom) * 0.5;
+                    if (ev.touches)
+                        ev = ev.touches[0];
+                    let dx = ev.clientX - ik.dragfrom.x, dy = ev.clientY - ik.dragfrom.y;
+                    let da = Math.atan2(ev.clientX - cx, cy - ev.clientY);
+                    switch (ik.itype) {
+                        case "k":
+                            switch (op.knobMode) {
+                                case "linear":
+                                    dv = (dx / ik.sensex - dy / ik.sensey) * (ik.valrange.max - ik.valrange.min);
+                                    if (ev.shiftKey)
+                                        dv *= 0.2;
+                                    el.setValue(ik.dragfrom.v + dv);
+                                    break;
+                                case "circularabs":
+                                    if (!ev.shiftKey) {
+                                        dv = ik.valrange.min + (da / Math.PI * 0.75 + 0.5) * (ik.valrange.max - ik.valrange.min);
+                                        el.setValue(dv);
+                                        break;
+                                    }
+                                case "circularrel":
+                                    if (da > ik.dragfrom.a + Math.PI) da -= Math.PI * 2;
+                                    if (da < ik.dragfrom.a - Math.PI) da += Math.PI * 2;
+                                    da -= ik.dragfrom.a;
+                                    dv = da / Math.PI / 1.5 * (ik.valrange.max - ik.valrange.min);
+                                    if (ev.shiftKey)
+                                        dv *= 0.2;
+                                    el.setValue(ik.dragfrom.v + dv);
+                            }
+                            break;
+                        case "h":
+                        case "v":
+                            dv = (dx / ik.sensex - dy / ik.sensey) * (ik.valrange.max - ik.valrange.min);
+                            if (ev.shiftKey)
+                                dv *= 0.2;
+                            el.setValue(ik.dragfrom.v + dv);
+                            break;
+                    }
+                };
+                ik.pointerup = () => {
+                    document.removeEventListener("mousemove", ik.pointermove);
+                    document.removeEventListener("touchmove", ik.pointermove);
+                    document.removeEventListener("mouseup", ik.pointerup);
+                    document.removeEventListener("touchend", ik.pointerup);
+                    document.removeEventListener("touchcancel", ik.pointerup);
+                    document.removeEventListener("touchstart", ik.preventScroll);
+                    let event = document.createEvent("HTMLEvents");
+                    event.initEvent("change", false, true);
+                    el.dispatchEvent(event);
+                };
+                ik.preventScroll = (ev) => {
+                    ev.preventDefault();
+                };
+                ik.keydown = () => {
+                    el.redraw();
+                };
+                ik.wheel = (ev) => {
+                    let delta = ev.deltaY > 0 ? -ik.valrange.step : ik.valrange.step;
+                    if (!ev.shiftKey)
+                        delta *= 5;
+                    el.setValue(+el.value + delta);
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                };
+                el.redraw = (f) => {
+                    if (f || ik.valueold != el.value) {
+                        let v = (el.value - ik.valrange.min) / (ik.valrange.max - ik.valrange.min);
+                        if (ik.sprites >= 1)
+                            el.style.backgroundPosition = "0px " + (-((v * ik.sprites) | 0) * ik.frameheight) + "px";
+                        else {
+                            switch (ik.itype) {
+                                case "k":
+                                    el.style.transform = "rotate(" + (270 * v - 135) + "deg)";
+                                    break;
+                                case "h":
+                                    el.style.backgroundPosition = ((w - h) * v) + "px 0px";
+                                    break;
+                                case "v":
+                                    el.style.backgroundPosition = "0px " + (h - w) * (1 - v) + "px";
+                                    break;
+                            }
+                        }
+                        ik.valueold = el.value;
+                    }
+                };
+                el.refresh();
+                el.redraw(true);
+                el.addEventListener("keydown", ik.keydown);
+                el.addEventListener("mousedown", ik.pointerdown);
+                el.addEventListener("touchstart", ik.pointerdown);
+                el.addEventListener("wheel", ik.wheel);
+            }
+            let refreshque = () => {
+                let elem = document.querySelectorAll("input.input-knob,input.input-slider");
+                for (let i = 0; i < elem.length; ++i)
+                    procque.push([initKnobs, elem[i]]);
+                elem = document.querySelectorAll("input[type=checkbox].input-switch,input[type=radio].input-switch");
+                for (let i = 0; i < elem.length; ++i) {
+                    procque.push([initSwitches, elem[i]]);
+                }
+            }
+            let procque = [];
+            refreshque();
+            setInterval(() => {
+                for (let i = 0; procque.length > 0 && i < 8; ++i) {
+                    let q = procque.shift();
+                    q[0](q[1]);
+                }
+                if (procque.length <= 0)
+                    refreshque();
+            }, 50);
+        });
+
+    </script>
+    <style>
+        table {
+            border-collapse: collapse;
+            border: none;
+        }
+
+        tr {
+            border-top: 1px solid black;
+        }
+
+        td {
+            padding-left: 10px;
+        }
+
+        tr:first-child {
+            border-top: none;
+        }
+
+        tr:last-child {
+            border-bottom: 1px solid black;
+        }
+
+        td {
+            border: none !important;
+        }
+
+        html * {
+            font-family: verdana, serif;
+        }
+
+        /* toggle in label designing */
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        / / background-color: red;
+            background-color: rgb(77, 77, 199);
+            border-radius: 30px;
+            border: 2px solid rgb(50, 50, 50);
+        }
+
+        /* After slide changes */
+        .toggle:after {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: rgb(50, 50, 50);
+            top: 1px;
+            left: 1px;
+            transition: all 0.5s;
+        }
+
+        /* Toggle text */
+        p {
+            font-family: Arial, Helvetica, sans-serif;
+            font-weight: bold;
+        }
+
+        /* Checkbox checked effect */
+        .checkbox:checked + .toggle::after {
+            left: 21px;
+        }
+
+        /* Checkbox checked toggle label bg color */
+        .checkbox:checked + .toggle {
+            background-color: rgb(85, 117, 67)
+        }
+
+        /* Checkbox vanished */
+        .checkbox {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<img style="float: right;height: 100px;" src="fhtw-logo-1.png"  alt="UAS TW Logo">
+<h1>Virtual Interactive Sensor Technology Application </h1>
+<h2>Connect VISTA to Server &nbsp;<span onclick="hideServerConfig()"
+                                        onmouseover="this.style='cursor:pointer;display: inline-block;transform: rotate(90deg);-webkit-user-select: none; user-select: none;'"
+                                        id="serverconfigtoggle"
+                                        style="display: inline-block;transform: rotate(90deg);-webkit-user-select: none; user-select: none;"><p
+        style="font-size: small">></p></span>
+</h2>
+<div id="serverconfig">
+    <label>Server&nbsp;</label><input type="text" placeholder="MQTT Broker URL" id="brokerurl" class="inputs">&nbsp;:&nbsp;<input
+        type="text" placeholder="port" inputmode="numeric" id="brokerport" class="inputs"><br/>
+    <label>ClientID&nbsp;</label><input type="text" placeholder="Client ID" id="clientid" class="inputs"><br/>
+    <label>Project Topic&nbsp;</label><input type="text" placeholder="Project Topic" id="projecttopic" class="inputs"><br/>
+    <input type="button" value="connect" onclick="connect()" id="connectbutton" class="inputs"><br/>
+    <input type="button" value="reset" onclick="enableInput()"><br/>
+</div>
+<h2>Sensor Pad</h2>
+<table style="text-align: center; vertical-align: middle;">
+    <tr>
+        <th>Range</th>
+        <th colspan="2">Topic</th>
+
+        <th>Trigger</th>
+        <th>Result</th>
+    </tr>
+    <tr>
+        <td colspan="5">&nbsp;</td>
+    <tr>
+    <tr style="border-top: 1px solid white;">
+        <td style="text-align: left">
+            <input type="number" pattern="[0-9.]" value="0" placeholder="Enter Min Value" id="slider1MinValue" class="inputs"
+                   onchange="changeSliderMin(this.value, 'slider1')"><br>
+            <input type="number" pattern="[0-9.]" value="100" placeholder="Enter Max Value" id="slider1MaxValue" class="inputs"
+                   onchange="changeSliderMax(this.value, 'slider1')">
+        </td>
+        <td colspan="2" style="text-align: left"><input type="text" placeholder="Enter Topic"
+                                                        id="slider1topic"
+                                                        class="inputs"></td>
+        <td><input type="range" min="0" max="100" value="50" class="input-slider" id="slider1"
+                   oninput="sendSlider(this.value, this.id);"></td>
+        <td><label id="slider1label"></label></td>
+    </tr>
+    <tr style="border-top: none;">
+        <td colspan="5">&nbsp;</td>
+    <tr>
+    <tr style="border-top: 1px solid black;">
+        <td colspan="5">&nbsp;</td>
+    <tr>
+    <tr style="border-top: 1px solid white;">
+        <td style="text-align: left">
+            <input type="number" pattern="[0-9.]" value="0" placeholder="Enter Min Value" id="slider2MinValue" class="inputs"
+                   onchange="changeSliderMin(this.value, 'slider2')"><br>
+            <input type="number" pattern="[0-9.]" value="100" placeholder="Enter Max Value" id="slider2MaxValue" class="inputs"
+                   onchange="changeSliderMax(this.value, 'slider2')">
+        </td>
+        <td colspan="2" style="text-align: left"><input type="text" placeholder="Enter Topic"
+                                                        id="slider2topic"
+                                                        class="inputs"></td>
+        <td><input type="range" min="0" max="100" value="50" class="input-slider" id="slider2"
+                   oninput="sendSlider(this.value, this.id);"></td>
+        <td><label id="slider2label"></label></td>
+    </tr>
+    <tr style="border-top: none;">
+        <td colspan="5">&nbsp;</td>
+    <tr>
+    <tr style="border-top: 1px solid black;">
+        <td colspan="5">&nbsp;</td>
+    <tr>
+
+    <tr style="border-top: 1px solid white;">
+        <td style="text-align: left">
+            <input type="number" pattern="[0-9.]" value="0" placeholder="Enter Min Value" id="slider3MinValue" class="inputs"
+                   onchange="changeSliderMin(this.value, 'slider3')"><br>
+            <input type="number" pattern="[0-9.]" value="100" placeholder="Enter Max Value" id="slider3MaxValue" class="inputs"
+                   onchange="changeSliderMax(this.value, 'slider3')">
+        </td>
+        <td colspan="2" style="text-align: left"><input type="text" placeholder="Enter Topic"
+                                                        id="slider3topic"
+                                                        class="inputs"></td>
+        <td><input type="range" min="0" max="100" value="50" class="input-slider" id="slider3"
+                   oninput="sendSlider(this.value, this.id);"></td>
+        <td><label id="slider3label"></label></td>
+    </tr>
+    <tr style="border-top: none;">
+        <td colspan="5">&nbsp;</td>
+    <tr>
+        <!--    <tr>-->
+        <!--        <td style="text-align: left">Flammensensor</td>-->
+        <!--        <td colspan="2" style="text-align: left"><input type="text" placeholder="Flammensensor Topic"-->
+        <!--                                                        id="flammensensortopic"-->
+        <!--                                                        class="inputs"></td>-->
+        <!--        <td><input type="button" onclick="sendFlamesensor()" value="Feuer"></td>-->
+        <!--        <td><img id="FireBoomImg" src="FireBoomEmpty.png" alt="Feuer" style="width: 60pt"></td>-->
+        <!--    </tr>-->
+    <tr>
+        <td colspan="5">&nbsp;</td>
+    </tr>
+    <tr style="border-top: none;">
+        <td style="text-align: left"> -</td>
+        <td colspan="2" style="text-align: left"><input type="text" placeholder="Enter Topic"
+                                                        id="toggle1topic"
+                                                        class="inputs"></td>
+        <td>
+            <input type="checkbox" id="toggle1" class="checkbox" oninput="sendToggle(this.checked, this.id)"/>
+            <label for="toggle1" class="toggle"
+                   style="color:rgb(50,50,50);-webkit-user-select: none; user-select: none;font-family: 'Courier New, bold',sans-serif;">1&thinsp;&thinsp;&thinsp;&thinsp;0</label>
+        </td>
+        <td><label id="toggle1label"></label></td>
+        </td>
+    </tr>
+    <tr style="border-top: none;">
+        <td colspan="5">&nbsp;</td>
+    </tr>
+    <tr>
+        <td colspan="5">&nbsp;</td>
+    </tr>
+    <tr style="border-top: none;">
+        <td style="text-align: left"> -</td>
+        <td colspan="2" style="text-align: left"><input type="text" placeholder="Enter Topic"
+                                                        id="toggle2topic"
+                                                        class="inputs"></td>
+        <td>
+            <input type="checkbox" id="toggle2" class="checkbox" oninput="sendToggle(this.checked, this.id)"/>
+            <label for="toggle2" class="toggle"
+                   style="color:rgb(50,50,50);-webkit-user-select: none; user-select: none;font-family: 'Courier New, bold',sans-serif;">1&thinsp;&thinsp;&thinsp;&thinsp;0</label>
+        </td>
+        <td><label id="toggle2label"></label>
+        </td>
+    </tr>
+    <tr style="border-top: none;">
+        <td colspan="5">&nbsp;</td>
+    </tr>
+    <tr>
+        <td colspan="5">&nbsp;</td>
+    </tr>
+    <tr style="border-top: none;">
+        <td style="text-align: left"> -</td>
+        <td colspan="2" style="text-align: left"><input type="text" placeholder="Enter Topic"
+                                                        id="toggle3topic"
+                                                        class="inputs"></td>
+        <td>
+            <input type="checkbox" id="toggle3" class="checkbox" oninput="sendToggle(this.checked, this.id)"/>
+            <label for="toggle3" class="toggle"
+                   style="color:rgb(50,50,50);-webkit-user-select: none; user-select: none;font-family: 'Courier New, bold',sans-serif;">1&thinsp;&thinsp;&thinsp;&thinsp;0</label>
+        </td>
+        <td><label id="toggle3label"></label></td>
+    </tr>
+    <tr style="border-top: none;">
+        <td colspan="5">&nbsp;</td>
+    </tr>
+    <tr style="border-top: 1px solid black">
+        <td colspan="5">&nbsp;</td>
+    </tr>
+    <tr style="border-top: none;border-bottom: 1px solid white;">
+        <td style="text-align: left">
+            <input type="number" pattern="[0-9.]" placeholder="Enter Min Value" id="randomValueMin" class="inputs"><br>
+            <input type="number" pattern="[0-9.]" placeholder="Enter Max Value" id="randomValueMax" class="inputs">
+        </td><!--</td>RANGE, TIME</td>-->
+        <td style="text-align: left"><input type="text" placeholder="Enter Topic" id="randomValueTopic"
+                                            class="inputs"></td>
+        <td style="text-align: left"></td>
+
+        <td>
+            <input type="button" id="randomValue" onclick="sendRandomValue()" value="send"/>
+        <td>
+            <label id="randomValuelabel"></label></td>
+    </tr>
+    <tr style="border-bottom: 1px solid black">
+        <td colspan="5">&nbsp;</td>
+    </tr>
+
+
+    <!--    <tr>-->
+    <!--        <td style="text-align: left">Netzteil</td>-->
+    <!--        <td colspan="2" style="text-align: left"><input type="text" placeholder="Netzteil Topic" id="netzteiltopic"-->
+    <!--                                                        class="inputs">-->
+    <!--        </td>-->
+
+    <!--        <td><input type="range" class="input-knob" data-diameter="70" data-src="knob.png" data-sprites="100"-->
+    <!--                   oninput="sendAcAdapter(this.value)"/>-->
+    <!--            &lt;!&ndash;<input type="range" class="input-knob" oninput="sendAcAdapeter(this.value)"/>&ndash;&gt;</td>-->
+    <!--        <td><label id="netzteillabel"></label></td>-->
+    <!--        &lt;!&ndash;        <td><img id="FireBoomImg" src="FireBoomEmpty.png" alt="Feuer" style="width: 60pt"></td>&ndash;&gt;-->
+    <!--    </tr>-->
+</table>
+<footer>
+
+    <p>&copy; 2024, S. F. Rauh, UAS Technikum Wien<br>
+
+</footer>
+<!--<div style="position:  absolute; bottom: 0; left: 0; z-index: 10; "class="footer">Footer content</div>-->
+</body>
+</html>
